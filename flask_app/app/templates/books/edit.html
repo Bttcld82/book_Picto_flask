@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Modifica {{ book.title }} - AAC Builder{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <header class="page-header">
+        <h1>✏️ Modifica Libro</h1>
+        <a href="{{ url_for('books.view_book', book_id=book.id) }}" class="btn btn-secondary">
+            ← Torna al Libro
+        </a>
+    </header>
+
+    <form method="POST" class="book-form" id="book-form">
+        <div class="form-group">
+            <label for="title" class="form-label">Titolo del Libro *</label>
+            <input type="text" 
+                   id="title" 
+                   name="title" 
+                   class="form-input" 
+                   value="{{ book.title }}"
+                   placeholder="Inserisci il titolo del libro..."
+                   required
+                   autofocus>
+            <small class="form-help">Il titolo sarà visibile nella lista dei libri</small>
+        </div>
+
+        <div class="form-group">
+            <label for="locale" class="form-label">Lingua</label>
+            <select id="locale" name="locale" class="form-select">
+                <option value="it-IT" {{ 'selected' if book.locale == 'it-IT' else '' }}>🇮🇹 Italiano</option>
+                <option value="en-US" {{ 'selected' if book.locale == 'en-US' else '' }}>🇺🇸 English</option>
+                <option value="es-ES" {{ 'selected' if book.locale == 'es-ES' else '' }}>🇪🇸 Español</option>
+                <option value="fr-FR" {{ 'selected' if book.locale == 'fr-FR' else '' }}>🇫🇷 Français</option>
+                <option value="de-DE" {{ 'selected' if book.locale == 'de-DE' else '' }}>🇩🇪 Deutsch</option>
+            </select>
+            <small class="form-help">Seleziona la lingua principale del libro</small>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" data-original-text="💾 Salva Modifiche">
+                💾 Salva Modifiche
+            </button>
+            <a href="{{ url_for('books.view_book', book_id=book.id) }}" class="btn btn-secondary">
+                ❌ Annulla
+            </a>
+        </div>
+    </form>
+
+    <!-- Info Box -->
+    <div class="info-box">
+        <h4>ℹ️ Informazioni</h4>
+        <ul>
+            <li><strong>ID Libro:</strong> {{ book.id }}</li>
+            <li><strong>Creato:</strong> {{ book.created_at.strftime('%d/%m/%Y %H:%M') if book.created_at else 'Non disponibile' }}</li>
+            <li><strong>Ultima modifica:</strong> {{ book.updated_at.strftime('%d/%m/%Y %H:%M') if book.updated_at else 'Non disponibile' }}</li>
+            {% if book.home_page_id %}
+                <li><strong>Pagina Home:</strong> {{ book.home_page_id }}</li>
+            {% endif %}
+        </ul>
+    </div>
+
+    <!-- Preview -->
+    <div class="preview-box">
+        <h4>👁️ Anteprima</h4>
+        <div class="book-card-preview">
+            <div class="book-header">
+                <h3 id="preview-title">{{ book.title }}</h3>
+                <div class="book-meta">
+                    <span id="preview-locale">{{ book.locale or 'it-IT' }}</span>
+                    <span class="separator">•</span>
+                    <span class="book-id">ID: {{ book.id }}</span>
+                </div>
+            </div>
+            <div class="book-actions">
+                <span class="btn btn-primary btn-sm">👁️ Apri</span>
+                <span class="btn btn-secondary btn-sm">✏️ Modifica</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Live preview del libro mentre si modifica
+document.addEventListener('DOMContentLoaded', function() {
+    const titleInput = document.getElementById('title');
+    const localeSelect = document.getElementById('locale');
+    const previewTitle = document.getElementById('preview-title');
+    const previewLocale = document.getElementById('preview-locale');
+    
+    function updatePreview() {
+        if (previewTitle && titleInput) {
+            previewTitle.textContent = titleInput.value || 'Titolo del libro';
+        }
+        if (previewLocale && localeSelect) {
+            previewLocale.textContent = localeSelect.value;
+        }
+    }
+    
+    if (titleInput) {
+        titleInput.addEventListener('input', updatePreview);
+    }
+    
+    if (localeSelect) {
+        localeSelect.addEventListener('change', updatePreview);
+    }
+    
+    // Auto-save draft ogni 10 secondi
+    setInterval(function() {
+        if (titleInput && titleInput.value !== '{{ book.title }}') {
+            localStorage.setItem('book_edit_draft_{{ book.id }}', JSON.stringify({
+                title: titleInput.value,
+                locale: localeSelect.value,
+                timestamp: new Date().toISOString()
+            }));
+            
+            // Mostra indicatore di salvataggio
+            const indicator = document.createElement('div');
+            indicator.textContent = '💾 Bozza salvata';
+            indicator.className = 'auto-save-indicator';
+            indicator.style.cssText = `
+                position: fixed;
+                top: 100px;
+                right: 20px;
+                background: var(--success-color);
+                color: white;
+                padding: 8px 16px;
+                border-radius: 6px;
+                font-size: 0.875rem;
+                z-index: 1000;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            document.body.appendChild(indicator);
+            
+            setTimeout(() => indicator.style.opacity = '1', 100);
+            setTimeout(() => {
+                indicator.style.opacity = '0';
+                setTimeout(() => indicator.remove(), 300);
+            }, 2000);
+        }
+    }, 10000);
+    
+    // Carica bozza se presente
+    const draft = localStorage.getItem('book_edit_draft_{{ book.id }}');
+    if (draft) {
+        try {
+            const data = JSON.parse(draft);
+            const draftTime = new Date(data.timestamp);
+            const timeDiff = (new Date() - draftTime) / 1000 / 60; // minuti
+            
+            if (timeDiff < 60) { // Bozza recente (< 1 ora)
+                if (confirm(`Trovata una bozza salvata ${Math.round(timeDiff)} minuti fa. Vuoi ripristinarla?`)) {
+                    titleInput.value = data.title;
+                    localeSelect.value = data.locale;
+                    updatePreview();
+                }
+            }
+        } catch (e) {
+            localStorage.removeItem('book_edit_draft_{{ book.id }}');
+        }
+    }
+    
+    // Pulisci bozza dopo submit
+    const form = document.getElementById('book-form');
+    if (form) {
+        form.addEventListener('submit', function() {
+            localStorage.removeItem('book_edit_draft_{{ book.id }}');
+        });
+    }
+});
+</script>
+
+<style>
+.info-box {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    margin-top: var(--spacing-xl);
+}
+
+.info-box h4 {
+    margin-bottom: var(--spacing-md);
+    color: var(--info-color);
+}
+
+.info-box ul {
+    list-style: none;
+    padding: 0;
+}
+
+.info-box li {
+    padding: var(--spacing-xs) 0;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.info-box li:last-child {
+    border-bottom: none;
+}
+
+.preview-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    margin-top: var(--spacing-xl);
+}
+
+.preview-box h4 {
+    margin-bottom: var(--spacing-md);
+    color: var(--primary-color);
+}
+
+.book-card-preview {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    max-width: 300px;
+}
+
+.book-card-preview .book-header h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-xs);
+}
+
+.book-card-preview .book-meta {
+    display: flex;
+    gap: var(--spacing-sm);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.book-card-preview .book-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: auto;
+}
+
+.book-card-preview .btn {
+    pointer-events: none;
+    opacity: 0.7;
+}
+</style>
+{% endblock %}

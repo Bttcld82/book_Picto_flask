@@ -1,0 +1,671 @@
+{% extends "base.html" %}
+
+{% block title %}Nuova Pagina - {{ book.title }} - AAC Builder{% endblock %}
+
+{% block content %}
+<div class="page-form-container">
+    <header class="page-header">
+        <div class="header-content">
+            <div class="breadcrumb">
+                <a href="{{ url_for('books.list_books') }}">Libri</a>
+                <span class="separator">›</span>
+                <a href="{{ url_for('books.view_book', book_id=book.id) }}">{{ book.title }}</a>
+                <span class="separator">›</span>
+                <a href="{{ url_for('pages.list_pages', book_id=book.id) }}">Pagine</a>
+                <span class="separator">›</span>
+                <span>Nuova Pagina</span>
+            </div>
+            <h1>➕ Crea Nuova Pagina</h1>
+            <p class="subtitle">Aggiungi una nuova pagina al libro "{{ book.title }}"</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('pages.list_pages', book_id=book.id) }}" 
+               class="btn btn-secondary">
+                ← Annulla
+            </a>
+        </div>
+    </header>
+
+    <div class="form-container">
+        <form method="POST" class="page-form" id="page-form">
+            <!-- Form Grid -->
+            <div class="form-grid">
+                
+                <!-- Basic Information -->
+                <div class="form-section">
+                    <h3>📝 Informazioni Base</h3>
+                    
+                    <div class="form-group">
+                        <label for="title" class="form-label required">
+                            Titolo della Pagina
+                        </label>
+                        <input type="text" 
+                               id="title" 
+                               name="title" 
+                               class="form-input"
+                               placeholder="Es: Home, Cibo, Animali, Azioni..."
+                               required
+                               maxlength="100"
+                               value="{{ request.form.title if request.form else '' }}">
+                        <small class="form-help">
+                            Nome identificativo della pagina (massimo 100 caratteri)
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="order" class="form-label">
+                            Posizione
+                        </label>
+                        <input type="number" 
+                               id="order" 
+                               name="order" 
+                               class="form-input"
+                               min="0"
+                               placeholder="Ordine di visualizzazione"
+                               value="{{ request.form.order if request.form else (next_order if next_order is defined else 0) }}">
+                        <small class="form-help">
+                            Ordine di visualizzazione della pagina (0 = prima)
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Grid Configuration -->
+                <div class="form-section">
+                    <h3>📐 Configurazione Griglia</h3>
+                    
+                    <div class="grid-config">
+                        <div class="form-group">
+                            <label for="grid_cols" class="form-label required">
+                                Colonne
+                            </label>
+                            <input type="number" 
+                                   id="grid_cols" 
+                                   name="grid_cols" 
+                                   class="form-input"
+                                   min="1"
+                                   max="10"
+                                   required
+                                   value="{{ request.form.grid_cols if request.form else '4' }}">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="grid_rows" class="form-label required">
+                                Righe
+                            </label>
+                            <input type="number" 
+                                   id="grid_rows" 
+                                   name="grid_rows" 
+                                   class="form-input"
+                                   min="1"
+                                   max="10"
+                                   required
+                                   value="{{ request.form.grid_rows if request.form else '3' }}">
+                        </div>
+                    </div>
+
+                    <!-- Grid Preview -->
+                    <div class="grid-preview-container">
+                        <label class="form-label">Anteprima Griglia</label>
+                        <div class="grid-preview" id="grid-preview">
+                            <!-- Grid cells will be generated by JavaScript -->
+                        </div>
+                        <div class="grid-info">
+                            <span id="grid-total">0</span> celle totali
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page Options -->
+            <div class="form-section full-width">
+                <h3>⚙️ Opzioni Pagina</h3>
+                
+                <div class="options-grid">
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" 
+                                   id="set_as_home" 
+                                   name="set_as_home"
+                                   {{ 'checked' if request.form.set_as_home or not book.home_page_id else '' }}>
+                            <span class="checkbox-custom"></span>
+                            <span class="checkbox-text">
+                                🏠 Imposta come pagina principale
+                                {% if not book.home_page_id %}
+                                    <small>(Consigliato per il primo libro)</small>
+                                {% endif %}
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" 
+                                   id="create_cards" 
+                                   name="create_cards">
+                            <span class="checkbox-custom"></span>
+                            <span class="checkbox-text">
+                                🎴 Crea carte di esempio
+                                <small>(Aggiunge alcune carte base per iniziare)</small>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Templates -->
+            <div class="form-section full-width">
+                <h3>🎨 Template Rapidi</h3>
+                <p class="section-description">
+                    Seleziona un template per configurare rapidamente la pagina
+                </p>
+                
+                <div class="templates-grid">
+                    <div class="template-card" data-template="home">
+                        <div class="template-icon">🏠</div>
+                        <h4>Home</h4>
+                        <p>4×3 - Pagina principale con categorie base</p>
+                        <div class="template-specs">4 col × 3 righe</div>
+                    </div>
+                    
+                    <div class="template-card" data-template="category">
+                        <div class="template-icon">📂</div>
+                        <h4>Categoria</h4>
+                        <p>5×4 - Pagina per categorie specifiche</p>
+                        <div class="template-specs">5 col × 4 righe</div>
+                    </div>
+                    
+                    <div class="template-card" data-template="simple">
+                        <div class="template-icon">📄</div>
+                        <h4>Semplice</h4>
+                        <p>3×2 - Pagina con poche opzioni</p>
+                        <div class="template-specs">3 col × 2 righe</div>
+                    </div>
+                    
+                    <div class="template-card" data-template="keyboard">
+                        <div class="template-icon">⌨️</div>
+                        <h4>Tastiera</h4>
+                        <p>6×5 - Layout tipo tastiera</p>
+                        <div class="template-specs">6 col × 5 righe</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+                <div class="actions-left">
+                    <a href="{{ url_for('pages.list_pages', book_id=book.id) }}" 
+                       class="btn btn-secondary">
+                        ← Annulla
+                    </a>
+                </div>
+                <div class="actions-right">
+                    <button type="submit" class="btn btn-primary btn-large">
+                        ✅ Crea Pagina
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Help Section -->
+    <div class="help-section">
+        <h3>💡 Suggerimenti</h3>
+        <div class="help-grid">
+            <div class="help-item">
+                <h4>📏 Dimensioni Griglia</h4>
+                <p>Una griglia 4×3 è ottimale per la maggior parte degli utilizzi. Griglie più grandi offrono più opzioni ma possono essere complesse da navigare.</p>
+            </div>
+            <div class="help-item">
+                <h4>🏠 Pagina Home</h4>
+                <p>La pagina home è quella che appare all'avvio dell'applicazione AAC. Dovrebbe contenere le categorie principali o le azioni più usate.</p>
+            </div>
+            <div class="help-item">
+                <h4>🔢 Ordine Pagine</h4>
+                <p>L'ordine determina la sequenza di visualizzazione nei menu. Pagine con ordine più basso appaiono prima.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Template configurations
+const templates = {
+    home: { cols: 4, rows: 3, title: 'Home' },
+    category: { cols: 5, rows: 4, title: 'Categoria' },
+    simple: { cols: 3, rows: 2, title: 'Semplice' },
+    keyboard: { cols: 6, rows: 5, title: 'Tastiera' }
+};
+
+// Initialize form
+document.addEventListener('DOMContentLoaded', function() {
+    updateGridPreview();
+    initializeTemplates();
+    
+    // Update preview when grid size changes
+    document.getElementById('grid_cols').addEventListener('input', updateGridPreview);
+    document.getElementById('grid_rows').addEventListener('input', updateGridPreview);
+});
+
+function updateGridPreview() {
+    const cols = parseInt(document.getElementById('grid_cols').value) || 1;
+    const rows = parseInt(document.getElementById('grid_rows').value) || 1;
+    const total = cols * rows;
+    
+    const preview = document.getElementById('grid-preview');
+    const totalSpan = document.getElementById('grid-total');
+    
+    // Update grid style
+    preview.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    preview.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+    
+    // Generate cells
+    preview.innerHTML = '';
+    for (let i = 0; i < total; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'preview-cell';
+        cell.textContent = i + 1;
+        preview.appendChild(cell);
+    }
+    
+    // Update total
+    totalSpan.textContent = total;
+    
+    // Validate grid size
+    if (total > 50) {
+        preview.classList.add('warning');
+        totalSpan.style.color = 'var(--warning-color)';
+    } else {
+        preview.classList.remove('warning');
+        totalSpan.style.color = '';
+    }
+}
+
+function initializeTemplates() {
+    const templateCards = document.querySelectorAll('.template-card');
+    
+    templateCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const templateName = this.dataset.template;
+            const template = templates[templateName];
+            
+            if (template) {
+                // Update form values
+                document.getElementById('grid_cols').value = template.cols;
+                document.getElementById('grid_rows').value = template.rows;
+                
+                // Update title if empty
+                const titleInput = document.getElementById('title');
+                if (!titleInput.value.trim()) {
+                    titleInput.value = template.title;
+                }
+                
+                // Update preview
+                updateGridPreview();
+                
+                // Visual feedback
+                templateCards.forEach(c => c.classList.remove('selected'));
+                this.classList.add('selected');
+                
+                // Focus title input
+                titleInput.focus();
+                titleInput.select();
+            }
+        });
+    });
+}
+
+// Form validation
+document.getElementById('page-form').addEventListener('submit', function(e) {
+    const title = document.getElementById('title').value.trim();
+    const cols = parseInt(document.getElementById('grid_cols').value);
+    const rows = parseInt(document.getElementById('grid_rows').value);
+    
+    if (!title) {
+        alert('Il titolo della pagina è obbligatorio');
+        e.preventDefault();
+        return;
+    }
+    
+    if (cols < 1 || cols > 10 || rows < 1 || rows > 10) {
+        alert('Le dimensioni della griglia devono essere tra 1 e 10');
+        e.preventDefault();
+        return;
+    }
+    
+    if (cols * rows > 50) {
+        if (!confirm('La griglia è molto grande (' + (cols * rows) + ' celle). Continuare?')) {
+            e.preventDefault();
+            return;
+        }
+    }
+});
+</script>
+
+<style>
+.page-form-container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    margin-top: var(--spacing-xs);
+}
+
+.form-container {
+    margin: var(--spacing-xl) 0;
+}
+
+.page-form {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-xl);
+    margin-bottom: var(--spacing-xl);
+}
+
+.form-section {
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+}
+
+.form-section.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-section h3 {
+    margin: 0 0 var(--spacing-lg) 0;
+    color: var(--primary-color);
+    font-size: 1.125rem;
+}
+
+.section-description {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-lg);
+    font-size: 0.875rem;
+}
+
+.form-group {
+    margin-bottom: var(--spacing-lg);
+}
+
+.form-label {
+    display: block;
+    margin-bottom: var(--spacing-sm);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.form-label.required::after {
+    content: ' *';
+    color: var(--danger-color);
+}
+
+.form-input {
+    width: 100%;
+    padding: var(--spacing-sm);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.form-help {
+    display: block;
+    margin-top: var(--spacing-xs);
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.grid-config {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+.grid-preview-container {
+    margin-top: var(--spacing-lg);
+}
+
+.grid-preview {
+    display: grid;
+    gap: 2px;
+    background: var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+    max-height: 200px;
+    overflow: hidden;
+}
+
+.preview-cell {
+    background: var(--bg-card);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    min-height: 20px;
+}
+
+.grid-preview.warning .preview-cell {
+    background: var(--warning-color);
+    color: white;
+}
+
+.grid-info {
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.options-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+    cursor: pointer;
+    padding: var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    transition: background-color 0.2s ease;
+}
+
+.checkbox-label:hover {
+    background: var(--bg-card-hover);
+}
+
+.checkbox-custom {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-xs);
+    position: relative;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+input[type="checkbox"] {
+    display: none;
+}
+
+input[type="checkbox"]:checked + .checkbox-custom {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+input[type="checkbox"]:checked + .checkbox-custom::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.checkbox-text {
+    flex: 1;
+}
+
+.checkbox-text small {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    margin-top: var(--spacing-xs);
+}
+
+.templates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.template-card {
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.template-card:hover {
+    border-color: var(--primary-color);
+    background: var(--bg-card-hover);
+    transform: translateY(-2px);
+}
+
+.template-card.selected {
+    border-color: var(--primary-color);
+    background: var(--primary-color);
+    color: white;
+}
+
+.template-icon {
+    font-size: 2rem;
+    margin-bottom: var(--spacing-sm);
+}
+
+.template-card h4 {
+    margin: 0 0 var(--spacing-sm) 0;
+    font-size: 1rem;
+}
+
+.template-card p {
+    margin: 0 0 var(--spacing-sm) 0;
+    font-size: 0.875rem;
+    opacity: 0.8;
+}
+
+.template-specs {
+    font-size: 0.75rem;
+    font-weight: 600;
+    opacity: 0.7;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--spacing-xl);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--border-color);
+}
+
+.actions-left,
+.actions-right {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.btn-large {
+    padding: var(--spacing-md) var(--spacing-xl);
+    font-size: 1.125rem;
+}
+
+.help-section {
+    margin-top: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+}
+
+.help-section h3 {
+    margin-bottom: var(--spacing-lg);
+    color: var(--primary-color);
+}
+
+.help-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.help-item h4 {
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+}
+
+.help-item p {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: var(--spacing-md);
+        align-items: stretch;
+    }
+    
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .grid-config {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+        gap: var(--spacing-md);
+        align-items: stretch;
+    }
+    
+    .templates-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .help-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}

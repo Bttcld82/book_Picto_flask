@@ -1,0 +1,46 @@
+{% macro book_card(book, pages_count=None) %}
+<div class="book-card" data-book-id="{{ book.id }}">
+    <!-- Book Header -->
+    <div class="book-header">
+        <h3 class="book-title">{{ book.title }}</h3>
+        <div class="book-meta">
+            <span class="book-locale">{{ book.locale or 'it-IT' }}</span>
+            {% if pages_count is not none %}
+                <span class="book-pages">{{ pages_count }} pagine</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Book Actions -->
+    <div class="book-actions">
+        <a href="{{ url_for('books.view_book', book_id=book.id) }}" 
+           class="btn btn-primary btn-sm">
+            👁️ Apri
+        </a>
+        <a href="{{ url_for('books.edit_book', book_id=book.id) }}" 
+           class="btn btn-secondary btn-sm">
+            ✏️ Modifica
+        </a>
+        
+        <!-- Delete with confirmation -->
+        <form method="POST" 
+              action="{{ url_for('books.delete_book', book_id=book.id) }}" 
+              class="delete-form"
+              onsubmit="return confirm('Sei sicuro di voler eliminare il libro \'{{ book.title }}\'? Verranno eliminate anche tutte le pagine e carte associate.')">
+            <button type="submit" class="btn btn-danger btn-sm">
+                🗑️ Elimina
+            </button>
+        </form>
+    </div>
+
+    <!-- Quick Info -->
+    <div class="book-info">
+        {% if book.home_page_id %}
+            <small class="book-home-page">
+                🏠 Pagina home: {{ book.home_page_id }}
+            </small>
+        {% endif %}
+        <small class="book-id">ID: {{ book.id }}</small>
+    </div>
+</div>
+{% endmacro %}

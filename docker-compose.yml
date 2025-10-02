@@ -1,0 +1,26 @@
+# Docker Compose per Flask AAC Builder
+# Configurazione semplificata
+
+version: '3.8'
+
+services:
+  flask-app:
+    build: ./flask_app
+    container_name: aac-flask-app
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - SECRET_KEY=change-this-in-production
+    volumes:
+      # Persistenza database
+      - ./flask_app:/app
+      # Persistenza media uploads
+      - ./flask_app/app/static/media:/app/app/static/media
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

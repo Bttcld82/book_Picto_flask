@@ -1,0 +1,12 @@
+# node
+frontend/node_modules/
+frontend/.next/
+# python
+backend/.venv/
+__pycache__/
+*.pyc
+# docker
+*.log
+# local db/media
+backend/data.db
+backend/media/

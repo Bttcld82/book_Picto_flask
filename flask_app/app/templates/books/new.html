@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Nuovo Libro - AAC Builder{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <header class="page-header">
+        <h1>➕ Crea Nuovo Libro</h1>
+        <p>Compila i dettagli per creare un nuovo libro AAC</p>
+    </header>
+
+    <form method="POST" class="book-form">
+        <div class="form-group">
+            <label for="title" class="form-label">Titolo del Libro *</label>
+            <input type="text" 
+                   id="title" 
+                   name="title" 
+                   class="form-input" 
+                   placeholder="Inserisci il titolo del libro..."
+                   required
+                   autofocus>
+            <small class="form-help">Il titolo sarà visibile nella lista dei libri</small>
+        </div>
+
+        <div class="form-group">
+            <label for="locale" class="form-label">Lingua</label>
+            <select id="locale" name="locale" class="form-select">
+                <option value="it-IT" selected>🇮🇹 Italiano</option>
+                <option value="en-US">🇺🇸 English</option>
+                <option value="es-ES">🇪🇸 Español</option>
+                <option value="fr-FR">🇫🇷 Français</option>
+                <option value="de-DE">🇩🇪 Deutsch</option>
+            </select>
+            <small class="form-help">Seleziona la lingua principale del libro</small>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                ✅ Crea Libro
+            </button>
+            <a href="{{ url_for('books.list_books') }}" class="btn btn-secondary">
+                ❌ Annulla
+            </a>
+        </div>
+    </form>
+
+    <!-- Quick Tips -->
+    <div class="tips-box">
+        <h4>💡 Suggerimenti</h4>
+        <ul>
+            <li>Usa un titolo descrittivo e facilmente riconoscibile</li>
+            <li>Dopo la creazione potrai aggiungere pagine e carte</li>
+            <li>La lingua può essere modificata in seguito</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-focus sul campo titolo quando la pagina è caricata
+document.addEventListener('DOMContentLoaded', function() {
+    const titleInput = document.getElementById('title');
+    if (titleInput) {
+        titleInput.focus();
+    }
+});
+</script>
+{% endblock %}

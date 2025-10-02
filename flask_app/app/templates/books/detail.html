@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block title %}{{ book.title }} - AAC Builder{% endblock %}
+
+{% block content %}
+<div class="book-detail-container">
+    <!-- Book Header -->
+    <header class="book-detail-header">
+        <div class="book-info-main">
+            <h1>📖 {{ book.title }}</h1>
+            <div class="book-meta-detail">
+                <span class="locale">🌐 {{ book.locale or 'it-IT' }}</span>
+                <span class="separator">•</span>
+                <span class="book-id">ID: {{ book.id }}</span>
+                {% if book.home_page_id %}
+                    <span class="separator">•</span>
+                    <span class="home-page">🏠 Home: {{ book.home_page_id }}</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="book-actions-header">
+            <a href="{{ url_for('books.edit_book', book_id=book.id) }}" 
+               class="btn btn-primary">
+                ✏️ Modifica Libro
+            </a>
+            <a href="{{ url_for('books.list_books') }}" 
+               class="btn btn-secondary">
+                ← Tutti i Libri
+            </a>
+        </div>
+    </header>
+
+    <!-- Pages Section -->
+    <section class="book-pages">
+        <div class="section-header">
+            <h2>📄 Pagine del Libro</h2>
+            <button class="btn btn-primary" onclick="showNotification('Funzionalità in arrivo!', 'info')">
+                ➕ Nuova Pagina
+            </button>
+        </div>
+
+        {% if pages %}
+            <div class="pages-grid">
+                {% for page in pages %}
+                    <div class="page-card">
+                        <div class="page-header">
+                            <h3>{{ page.title or 'Pagina ' + page.id|string }}</h3>
+                            <span class="page-order">{{ page.order }}</span>
+                        </div>
+                        <div class="page-info">
+                            <span class="grid-info">
+                                📐 {{ page.grid_cols }}×{{ page.grid_rows }}
+                            </span>
+                        </div>
+                        <div class="page-actions">
+                            <button class="btn btn-sm btn-primary" 
+                                    onclick="showNotification('Apertura pagina in arrivo!', 'info')">
+                                👁️ Apri
+                            </button>
+                            <button class="btn btn-sm btn-secondary"
+                                    onclick="showNotification('Modifica pagina in arrivo!', 'info')">
+                                ✏️ Modifica
+                            </button>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h3>📄 Nessuna pagina presente</h3>
+                <p>Inizia aggiungendo la prima pagina a questo libro</p>
+                <button class="btn btn-primary" 
+                        onclick="showNotification('Funzionalità in arrivo presto!', 'info')">
+                    Crea la prima pagina
+                </button>
+            </div>
+        {% endif %}
+    </section>
+
+    <!-- Book Stats -->
+    <section class="book-stats">
+        <h3>📊 Statistiche Libro</h3>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">{{ pages|length }}</div>
+                <div class="stat-label">{{ 'Pagina' if pages|length == 1 else 'Pagine' }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">0</div>
+                <div class="stat-label">Carte</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ book.locale or 'it-IT' }}</div>
+                <div class="stat-label">Lingua</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Danger Zone -->
+    <section class="danger-zone">
+        <h3>⚠️ Zona Pericolosa</h3>
+        <p>Eliminare questo libro rimuoverà permanentemente tutte le pagine e carte associate.</p>
+        <form method="POST" 
+              action="{{ url_for('books.delete_book', book_id=book.id) }}" 
+              class="delete-form-block"
+              onsubmit="return confirm('ATTENZIONE: Eliminare il libro \'{{ book.title }}\' e tutte le sue pagine e carte? Questa azione NON può essere annullata!')">
+            <button type="submit" class="btn btn-danger">
+                🗑️ Elimina Libro Definitivamente
+            </button>
+        </form>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+/* Stili specifici per la pagina dettaglio libro */
+.book-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-xxl);
+    padding-bottom: var(--spacing-lg);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.book-detail-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: var(--spacing-sm);
+}
+
+.book-meta-detail {
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
+.book-actions-header {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+.section-header h2 {
+    font-size: 1.5rem;
+    color: var(--text-primary);
+}
+
+.pages-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xxl);
+}
+
+.page-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    transition: all 0.2s ease;
+}
+
+.page-card:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-hover);
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.page-order {
+    background: var(--primary-color);
+    color: white;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.page-info {
+    margin-bottom: var(--spacing-md);
+    color: var(--text-secondary);
+}
+
+.page-actions {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+.book-stats {
+    margin: var(--spacing-xxl) 0;
+    padding: var(--spacing-xl);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-lg);
+}
+
+.stat-card {
+    text-align: center;
+    padding: var(--spacing-lg);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+}
+
+.stat-card .stat-number {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: var(--spacing-xs);
+}
+
+.stat-card .stat-label {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.danger-zone {
+    margin-top: var(--spacing-xxl);
+    padding: var(--spacing-xl);
+    background: rgba(220, 53, 69, 0.05);
+    border: 1px solid rgba(220, 53, 69, 0.2);
+    border-radius: var(--radius-lg);
+}
+
+.danger-zone h3 {
+    color: #ff6b7a;
+    margin-bottom: var(--spacing-md);
+}
+
+.danger-zone p {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-lg);
+}
+
+.delete-form-block {
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .book-detail-header {
+        flex-direction: column;
+        gap: var(--spacing-lg);
+    }
+    
+    .book-actions-header {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        gap: var(--spacing-md);
+        text-align: center;
+    }
+    
+    .pages-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% from "components/book_card.html" import book_card %}
+
+{% block title %}Home - AAC Builder{% endblock %}
+
+{% block content %}
+<div class="home-container">
+    <header class="home-header">
+        <h1>🔖 I Tuoi Libri AAC</h1>
+        <p>Crea e gestisci i tuoi libri di comunicazione aumentativa e alternativa</p>
+    </header>
+
+    <!-- Search and Actions -->
+    <div class="home-actions">
+        <form method="GET" class="search-form">
+            <div class="search-group">
+                <input type="text" 
+                       name="q" 
+                       value="{{ search_query or '' }}" 
+                       placeholder="Cerca libri per titolo..."
+                       class="search-input">
+                <button type="submit" class="search-btn">🔍 Cerca</button>
+                {% if search_query %}
+                    <a href="{{ url_for('main.index') }}" class="clear-search">✕ Cancella</a>
+                {% endif %}
+            </div>
+        </form>
+        
+        <a href="{{ url_for('books.create_book') }}" class="btn btn-primary">
+            ➕ Nuovo Libro
+        </a>
+    </div>
+
+    <!-- Results Summary -->
+    {% if search_query %}
+        <div class="results-summary">
+            {% if total_books == 0 %}
+                <p>Nessun risultato per "<strong>{{ search_query }}</strong>"</p>
+            {% elif total_books == 1 %}
+                <p>1 libro trovato per "<strong>{{ search_query }}</strong>"</p>
+            {% else %}
+                <p>{{ total_books }} libri trovati per "<strong>{{ search_query }}</strong>"</p>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- Books Grid -->
+    <div class="books-grid">
+        {% if books %}
+            {% for book in books %}
+                {{ book_card(book) }}
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                {% if search_query %}
+                    <h3>🔍 Nessun libro trovato</h3>
+                    <p>Prova a modificare i termini di ricerca</p>
+                    <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Mostra tutti i libri</a>
+                {% else %}
+                    <h3>📚 Nessun libro presente</h3>
+                    <p>Inizia creando il tuo primo libro AAC</p>
+                    <a href="{{ url_for('books.create_book') }}" class="btn btn-primary">Crea il primo libro</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Stats -->
+    {% if books and not search_query %}
+        <div class="home-stats">
+            <div class="stat-item">
+                <span class="stat-number">{{ books|length }}</span>
+                <span class="stat-label">{{ 'Libro' if books|length == 1 else 'Libri' }}</span>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

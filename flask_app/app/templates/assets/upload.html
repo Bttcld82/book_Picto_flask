@@ -1,0 +1,671 @@
+{% extends "base.html" %}
+
+{% block title %}Carica Asset{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <div class="page-title">
+            <h1>
+                <i class="icon">⬆️</i>
+                Carica Asset
+            </h1>
+            <p class="subtitle">Aggiungi nuovi file multimediali per le tue carte AAC</p>
+        </div>
+        <div class="page-actions">
+            <a href="{{ url_for('assets.list_assets') }}" class="btn btn-secondary">
+                <i class="icon">←</i>
+                Torna agli Asset
+            </a>
+        </div>
+    </div>
+
+    <div class="upload-container">
+        <!-- Upload Zone -->
+        <div class="upload-zone" id="uploadZone">
+            <div class="upload-content">
+                <div class="upload-icon">📁</div>
+                <h3>Trascina i file qui</h3>
+                <p>oppure clicca per selezionare i file</p>
+                <input type="file" 
+                       id="fileInput" 
+                       name="files" 
+                       multiple 
+                       accept="image/*,audio/*,video/*"
+                       style="display: none;">
+                <div class="upload-info">
+                    <p><strong>Formati supportati:</strong> PNG, JPG, JPEG, GIF, WebP, BMP, SVG</p>
+                    <p><strong>Dimensione massima:</strong> 10MB per file</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="upload-progress" id="uploadProgress" style="display: none;">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">Caricamento in corso...</div>
+        </div>
+
+        <!-- File List -->
+        <div class="file-list" id="fileList" style="display: none;">
+            <h3>File Selezionati</h3>
+            <div class="selected-files" id="selectedFiles"></div>
+            <div class="upload-actions">
+                <button type="button" class="btn btn-primary" id="uploadBtn" disabled>
+                    Carica File
+                </button>
+                <button type="button" class="btn btn-secondary" id="clearBtn">
+                    Cancella Tutto
+                </button>
+            </div>
+        </div>
+
+        <!-- Upload Results -->
+        <div class="upload-results" id="uploadResults" style="display: none;">
+            <h3>Risultati Upload</h3>
+            <div class="results-content" id="resultsContent"></div>
+            <div class="results-actions">
+                <a href="{{ url_for('assets.list_assets') }}" class="btn btn-primary">
+                    Visualizza Asset
+                </a>
+                <button type="button" class="btn btn-secondary" id="uploadMoreBtn">
+                    Carica Altri File
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fallback Form -->
+    <div class="fallback-form" id="fallbackForm" style="display: none;">
+        <h3>Upload Classico</h3>
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="fallbackFiles">Seleziona File</label>
+                <input type="file" 
+                       id="fallbackFiles" 
+                       name="files" 
+                       multiple 
+                       accept="image/*,audio/*,video/*"
+                       class="form-control">
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Carica File</button>
+                <a href="{{ url_for('assets.list_assets') }}" class="btn btn-secondary">Annulla</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.upload-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.upload-zone {
+    border: 3px dashed var(--color-border);
+    border-radius: 16px;
+    padding: 60px 40px;
+    text-align: center;
+    background: var(--color-neutral-50);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 30px;
+}
+
+.upload-zone:hover,
+.upload-zone.dragover {
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+    transform: translateY(-2px);
+}
+
+.upload-content .upload-icon {
+    font-size: 4em;
+    margin-bottom: 20px;
+    opacity: 0.7;
+}
+
+.upload-content h3 {
+    margin: 0 0 10px 0;
+    color: var(--color-text);
+    font-size: 1.5em;
+}
+
+.upload-content p {
+    margin: 0 0 20px 0;
+    color: var(--color-text-secondary);
+    font-size: 1.1em;
+}
+
+.upload-info {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--color-border);
+}
+
+.upload-info p {
+    font-size: 0.9em;
+    color: var(--color-text-muted);
+    margin: 5px 0;
+}
+
+.upload-progress {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--color-neutral-200);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--color-primary);
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.progress-text {
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.file-list,
+.upload-results {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    background: var(--color-neutral-50);
+}
+
+.file-preview {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-right: 15px;
+    background: var(--color-neutral-200);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.file-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.file-preview .file-icon {
+    font-size: 1.5em;
+    color: var(--color-text-muted);
+}
+
+.file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-name {
+    font-weight: 500;
+    margin: 0 0 5px 0;
+    word-break: break-all;
+}
+
+.file-details {
+    font-size: 0.85em;
+    color: var(--color-text-secondary);
+}
+
+.file-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: 500;
+    margin-left: 15px;
+}
+
+.file-status.valid {
+    background: var(--color-success-light);
+    color: var(--color-success);
+}
+
+.file-status.invalid {
+    background: var(--color-error-light);
+    color: var(--color-error);
+}
+
+.file-remove {
+    background: none;
+    border: none;
+    color: var(--color-error);
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 5px;
+    margin-left: 10px;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.file-remove:hover {
+    background: var(--color-error-light);
+}
+
+.upload-actions,
+.results-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+    justify-content: center;
+}
+
+.result-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.result-item.success {
+    background: var(--color-success-light);
+    border-left: 4px solid var(--color-success);
+}
+
+.result-item.error {
+    background: var(--color-error-light);
+    border-left: 4px solid var(--color-error);
+}
+
+.result-icon {
+    font-size: 1.5em;
+    margin-right: 15px;
+}
+
+.result-content {
+    flex: 1;
+}
+
+.result-name {
+    font-weight: 500;
+    margin: 0 0 5px 0;
+}
+
+.result-message {
+    font-size: 0.9em;
+    color: var(--color-text-secondary);
+    margin: 0;
+}
+
+.fallback-form {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .upload-zone {
+        padding: 40px 20px;
+    }
+    
+    .upload-actions,
+    .results-actions {
+        flex-direction: column;
+    }
+    
+    .file-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 10px;
+    }
+    
+    .file-preview {
+        margin-right: 0;
+    }
+}
+</style>
+
+<script>
+class AssetUploader {
+    constructor() {
+        this.uploadZone = document.getElementById('uploadZone');
+        this.fileInput = document.getElementById('fileInput');
+        this.fileList = document.getElementById('fileList');
+        this.selectedFiles = document.getElementById('selectedFiles');
+        this.uploadBtn = document.getElementById('uploadBtn');
+        this.clearBtn = document.getElementById('clearBtn');
+        this.uploadProgress = document.getElementById('uploadProgress');
+        this.progressFill = document.getElementById('progressFill');
+        this.progressText = document.getElementById('progressText');
+        this.uploadResults = document.getElementById('uploadResults');
+        this.resultsContent = document.getElementById('resultsContent');
+        this.uploadMoreBtn = document.getElementById('uploadMoreBtn');
+        this.fallbackForm = document.getElementById('fallbackForm');
+        
+        this.files = [];
+        this.isUploading = false;
+        
+        this.initEventListeners();
+        this.checkBrowserSupport();
+    }
+    
+    checkBrowserSupport() {
+        // Controlla se il browser supporta le API moderne
+        const hasFileAPI = window.File && window.FileReader && window.FileList && window.Blob;
+        const hasFormData = window.FormData;
+        const hasXHR = window.XMLHttpRequest && 'upload' in new XMLHttpRequest();
+        
+        if (!hasFileAPI || !hasFormData || !hasXHR) {
+            // Fallback per browser vecchi
+            this.uploadZone.style.display = 'none';
+            this.fallbackForm.style.display = 'block';
+        }
+    }
+    
+    initEventListeners() {
+        // Click su upload zone
+        this.uploadZone.addEventListener('click', () => {
+            if (!this.isUploading) {
+                this.fileInput.click();
+            }
+        });
+        
+        // Selezione file
+        this.fileInput.addEventListener('change', (e) => {
+            this.handleFiles(e.target.files);
+        });
+        
+        // Drag & Drop
+        this.uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            this.uploadZone.classList.add('dragover');
+        });
+        
+        this.uploadZone.addEventListener('dragleave', () => {
+            this.uploadZone.classList.remove('dragover');
+        });
+        
+        this.uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            this.uploadZone.classList.remove('dragover');
+            this.handleFiles(e.dataTransfer.files);
+        });
+        
+        // Bottoni
+        this.uploadBtn.addEventListener('click', () => this.uploadFiles());
+        this.clearBtn.addEventListener('click', () => this.clearFiles());
+        this.uploadMoreBtn.addEventListener('click', () => this.resetUploader());
+    }
+    
+    handleFiles(fileList) {
+        const newFiles = Array.from(fileList);
+        this.files = [...this.files, ...newFiles];
+        this.renderFileList();
+        this.fileInput.value = ''; // Reset input
+    }
+    
+    validateFile(file) {
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 
+                             'image/webp', 'image/bmp', 'image/svg+xml'];
+        
+        if (file.size > maxSize) {
+            return { valid: false, message: 'File troppo grande (max 10MB)' };
+        }
+        
+        if (!allowedTypes.includes(file.type)) {
+            return { valid: false, message: 'Tipo file non supportato' };
+        }
+        
+        return { valid: true, message: 'File valido' };
+    }
+    
+    renderFileList() {
+        if (this.files.length === 0) {
+            this.fileList.style.display = 'none';
+            return;
+        }
+        
+        this.fileList.style.display = 'block';
+        this.selectedFiles.innerHTML = '';
+        
+        this.files.forEach((file, index) => {
+            const validation = this.validateFile(file);
+            const fileItem = this.createFileItem(file, index, validation);
+            this.selectedFiles.appendChild(fileItem);
+        });
+        
+        // Abilita/disabilita bottone upload
+        const validFiles = this.files.filter(file => this.validateFile(file).valid);
+        this.uploadBtn.disabled = validFiles.length === 0 || this.isUploading;
+    }
+    
+    createFileItem(file, index, validation) {
+        const item = document.createElement('div');
+        item.className = 'file-item';
+        
+        const preview = document.createElement('div');
+        preview.className = 'file-preview';
+        
+        if (file.type.startsWith('image/')) {
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            img.onload = () => URL.revokeObjectURL(img.src);
+            preview.appendChild(img);
+        } else {
+            const icon = document.createElement('div');
+            icon.className = 'file-icon';
+            icon.textContent = '📄';
+            preview.appendChild(icon);
+        }
+        
+        const info = document.createElement('div');
+        info.className = 'file-info';
+        
+        const name = document.createElement('div');
+        name.className = 'file-name';
+        name.textContent = file.name;
+        
+        const details = document.createElement('div');
+        details.className = 'file-details';
+        details.textContent = `${this.formatFileSize(file.size)} • ${file.type}`;
+        
+        info.appendChild(name);
+        info.appendChild(details);
+        
+        const status = document.createElement('div');
+        status.className = `file-status ${validation.valid ? 'valid' : 'invalid'}`;
+        status.textContent = validation.message;
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'file-remove';
+        removeBtn.textContent = '×';
+        removeBtn.title = 'Rimuovi file';
+        removeBtn.onclick = () => this.removeFile(index);
+        
+        item.appendChild(preview);
+        item.appendChild(info);
+        item.appendChild(status);
+        item.appendChild(removeBtn);
+        
+        return item;
+    }
+    
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    removeFile(index) {
+        this.files.splice(index, 1);
+        this.renderFileList();
+    }
+    
+    clearFiles() {
+        this.files = [];
+        this.renderFileList();
+    }
+    
+    async uploadFiles() {
+        const validFiles = this.files.filter(file => this.validateFile(file).valid);
+        
+        if (validFiles.length === 0) {
+            alert('Nessun file valido da caricare');
+            return;
+        }
+        
+        this.isUploading = true;
+        this.uploadBtn.disabled = true;
+        this.uploadProgress.style.display = 'block';
+        this.fileList.style.display = 'none';
+        
+        const results = [];
+        
+        for (let i = 0; i < validFiles.length; i++) {
+            const file = validFiles[i];
+            const progress = ((i + 1) / validFiles.length) * 100;
+            
+            this.progressFill.style.width = `${progress}%`;
+            this.progressText.textContent = `Caricando ${file.name}... (${i + 1}/${validFiles.length})`;
+            
+            try {
+                const result = await this.uploadSingleFile(file);
+                results.push({
+                    file: file,
+                    success: true,
+                    data: result
+                });
+            } catch (error) {
+                results.push({
+                    file: file,
+                    success: false,
+                    error: error.message
+                });
+            }
+        }
+        
+        this.showResults(results);
+        this.isUploading = false;
+    }
+    
+    uploadSingleFile(file) {
+        return new Promise((resolve, reject) => {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const xhr = new XMLHttpRequest();
+            
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.success) {
+                            resolve(response);
+                        } else {
+                            reject(new Error(response.message || 'Errore sconosciuto'));
+                        }
+                    } catch (e) {
+                        reject(new Error('Errore nel parsing della risposta'));
+                    }
+                } else {
+                    reject(new Error(`Errore HTTP: ${xhr.status}`));
+                }
+            };
+            
+            xhr.onerror = function() {
+                reject(new Error('Errore di rete'));
+            };
+            
+            xhr.open('POST', '/assets/api/upload');
+            xhr.send(formData);
+        });
+    }
+    
+    showResults(results) {
+        this.uploadProgress.style.display = 'none';
+        this.uploadResults.style.display = 'block';
+        
+        this.resultsContent.innerHTML = '';
+        
+        results.forEach(result => {
+            const item = this.createResultItem(result);
+            this.resultsContent.appendChild(item);
+        });
+    }
+    
+    createResultItem(result) {
+        const item = document.createElement('div');
+        item.className = `result-item ${result.success ? 'success' : 'error'}`;
+        
+        const icon = document.createElement('div');
+        icon.className = 'result-icon';
+        icon.textContent = result.success ? '✅' : '❌';
+        
+        const content = document.createElement('div');
+        content.className = 'result-content';
+        
+        const name = document.createElement('div');
+        name.className = 'result-name';
+        name.textContent = result.file.name;
+        
+        const message = document.createElement('div');
+        message.className = 'result-message';
+        message.textContent = result.success ? 
+            'Caricato con successo' : 
+            `Errore: ${result.error}`;
+        
+        content.appendChild(name);
+        content.appendChild(message);
+        
+        item.appendChild(icon);
+        item.appendChild(content);
+        
+        return item;
+    }
+    
+    resetUploader() {
+        this.files = [];
+        this.isUploading = false;
+        this.uploadResults.style.display = 'none';
+        this.uploadProgress.style.display = 'none';
+        this.fileList.style.display = 'none';
+        this.progressFill.style.width = '0%';
+        this.uploadBtn.disabled = true;
+    }
+}
+
+// Inizializza uploader quando la pagina è caricata
+document.addEventListener('DOMContentLoaded', function() {
+    new AssetUploader();
+});
+</script>
+{% endblock %}

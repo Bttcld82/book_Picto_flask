@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "book_Picto_flask"
+version = "2.0.0"
+description = "Flask AAC (Augmentative and Alternative Communication) Book Builder - Create interactive communication books with pictograms"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Bttcld82", email = "your.email@example.com"}
+]
+keywords = ["aac", "communication", "pictogram", "accessibility", "flask", "healthcare"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Healthcare Industry",
+    "Intended Audience :: Education",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Framework :: Flask",
+]
+
+[project.urls]
+Homepage = "https://github.com/Bttcld82/book_Picto_flask"
+Repository = "https://github.com/Bttcld82/book_Picto_flask"
+Issues = "https://github.com/Bttcld82/book_Picto_flask/issues"
+Changelog = "https://github.com/Bttcld82/book_Picto_flask/blob/main/CHANGELOG.md"
+dependencies = [
+  # Core Flask
+  "flask>=3.0.0",
+  "flask-cors>=4.0.0",
+  
+  # Database
+  "sqlalchemy>=2.0.0",
+  
+  # Forms e validazione
+  "flask-wtf>=2.0.0",
+  "wtforms>=3.1.0",
+  
+  # Template engine (incluso in Flask)
+  "jinja2>=3.1.0",
+  
+  # File handling
+  "python-multipart>=0.0.9",
+  "pillow>=10.0.0",
+  
+  # Production server
+  "gunicorn>=21.0.0",
+]

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Libri - AAC Builder{% endblock %}
+
+{% block content %}
+<div class="books-container">
+    <header class="page-header">
+        <h1>📚 Tutti i Libri</h1>
+        <a href="{{ url_for('books.create_book') }}" class="btn btn-primary">
+            ➕ Nuovo Libro
+        </a>
+    </header>
+
+    {% if books %}
+        <div class="books-list">
+            {% for book in books %}
+                <div class="book-item">
+                    <div class="book-item-content">
+                        <h3>
+                            <a href="{{ url_for('books.view_book', book_id=book.id) }}">
+                                {{ book.title }}
+                            </a>
+                        </h3>
+                        <p class="book-meta">
+                            <span class="locale">{{ book.locale or 'it-IT' }}</span>
+                            <span class="separator">•</span>
+                            <span class="book-id">ID: {{ book.id }}</span>
+                            {% if book.home_page_id %}
+                                <span class="separator">•</span>
+                                <span class="home-page">Home: {{ book.home_page_id }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="book-item-actions">
+                        <a href="{{ url_for('books.view_book', book_id=book.id) }}" 
+                           class="btn btn-sm btn-primary">Apri</a>
+                        <a href="{{ url_for('books.edit_book', book_id=book.id) }}" 
+                           class="btn btn-sm btn-secondary">Modifica</a>
+                        <form method="POST" 
+                              action="{{ url_for('books.delete_book', book_id=book.id) }}" 
+                              style="display: inline-block;"
+                              onsubmit="return confirm('Eliminare il libro \'{{ book.title }}\'?')">
+                            <button type="submit" class="btn btn-sm btn-danger">Elimina</button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <h3>📖 Nessun libro presente</h3>
+            <p>Inizia creando il tuo primo libro AAC</p>
+            <a href="{{ url_for('books.create_book') }}" class="btn btn-primary">
+                Crea il primo libro
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
