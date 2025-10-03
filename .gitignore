@@ -5,8 +5,10 @@ frontend/.next/
 backend/.venv/
 __pycache__/
 *.pyc
+*.egg-info/
 # docker
 *.log
 # local db/media
 backend/data.db
 backend/media/
+data.db

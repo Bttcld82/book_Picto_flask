@@ -1,0 +1,764 @@
+{% extends "base.html" %}
+
+{% block title %}Modifica {{ page.title }} - {{ book.title }} - AAC Builder{% endblock %}
+
+{% block content %}
+<div class="page-form-container">
+    <header class="page-header">
+        <div class="header-content">
+            <div class="breadcrumb">
+                <a href="{{ url_for('books.list_books') }}">Libri</a>
+                <span class="separator">›</span>
+                <a href="{{ url_for('books.view_book', book_id=book.id) }}">{{ book.title }}</a>
+                <span class="separator">›</span>
+                <a href="{{ url_for('pages.list_pages', book_id=book.id) }}">Pagine</a>
+                <span class="separator">›</span>
+                <a href="{{ url_for('pages.view_page', book_id=book.id, page_id=page.id) }}">{{ page.title }}</a>
+                <span class="separator">›</span>
+                <span>Modifica</span>
+            </div>
+                        <h1>✏️ Modifica Pagina</h1>
+        </div>
+    </header>
+
+    <!-- Hidden data for JavaScript -->
+    <div id="page-data" 
+         style="display: none;"
+         data-cols="{{ page.grid_cols }}"
+         data-rows="{{ page.grid_rows }}">
+    </div>
+            <p class="subtitle">Modifica le proprietà della pagina "{{ page.title }}"</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('pages.view_page', book_id=book.id, page_id=page.id) }}" 
+               class="btn btn-secondary">
+                ← Annulla
+            </a>
+        </div>
+    </header>
+
+    <div class="form-container">
+        <form method="POST" class="page-form" id="page-form">
+            <!-- Form Grid -->
+            <div class="form-grid">
+                
+                <!-- Basic Information -->
+                <div class="form-section">
+                    <h3>📝 Informazioni Base</h3>
+                    
+                    <div class="form-group">
+                        <label for="title" class="form-label required">
+                            Titolo della Pagina
+                        </label>
+                        <input type="text" 
+                               id="title" 
+                               name="title" 
+                               class="form-input"
+                               placeholder="Es: Home, Cibo, Animali, Azioni..."
+                               required
+                               maxlength="100"
+                               value="{{ request.form.title if request.form else page.title }}">
+                        <small class="form-help">
+                            Nome identificativo della pagina (massimo 100 caratteri)
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="order" class="form-label">
+                            Posizione
+                        </label>
+                        <input type="number" 
+                               id="order" 
+                               name="order" 
+                               class="form-input"
+                               min="0"
+                               placeholder="Ordine di visualizzazione"
+                               value="{{ request.form.order if request.form else page.order }}">
+                        <small class="form-help">
+                            Ordine di visualizzazione della pagina (0 = prima)
+                        </small>
+                    </div>
+
+                    <!-- Current Page Status -->
+                    <div class="status-info">
+                        <div class="status-item">
+                            <span class="status-label">ID Pagina:</span>
+                            <span class="status-value">{{ page.id }}</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Carte presenti:</span>
+                            <span class="status-value">{{ page.cards|length if page.cards else 0 }}</span>
+                        </div>
+                        {% if book.home_page_id == page.id %}
+                            <div class="status-item">
+                                <span class="status-badge home">🏠 Pagina Home</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Grid Configuration -->
+                <div class="form-section">
+                    <h3>📐 Configurazione Griglia</h3>
+                    
+                    <div class="grid-config">
+                        <div class="form-group">
+                            <label for="grid_cols" class="form-label required">
+                                Colonne
+                            </label>
+                            <input type="number" 
+                                   id="grid_cols" 
+                                   name="grid_cols" 
+                                   class="form-input"
+                                   min="1"
+                                   max="10"
+                                   required
+                                   value="{{ request.form.grid_cols if request.form else page.grid_cols }}">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="grid_rows" class="form-label required">
+                                Righe
+                            </label>
+                            <input type="number" 
+                                   id="grid_rows" 
+                                   name="grid_rows" 
+                                   class="form-input"
+                                   min="1"
+                                   max="10"
+                                   required
+                                   value="{{ request.form.grid_rows if request.form else page.grid_rows }}">
+                        </div>
+                    </div>
+
+                    <!-- Grid Change Warning -->
+                    {% if page.cards and page.cards|length > 0 %}
+                        <div class="warning-box" id="grid-warning" style="display: none;">
+                            <div class="warning-icon">⚠️</div>
+                            <div class="warning-content">
+                                <h4>Attenzione</h4>
+                                <p>Modificare le dimensioni della griglia potrebbe influenzare le carte esistenti. Le carte posizionate fuori dalla nuova griglia potrebbero essere perse.</p>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Grid Preview -->
+                    <div class="grid-preview-container">
+                        <label class="form-label">Anteprima Griglia</label>
+                        <div class="grid-preview" id="grid-preview">
+                            <!-- Grid cells will be generated by JavaScript -->
+                        </div>
+                        <div class="grid-info">
+                            <span id="grid-total">0</span> celle totali
+                            {% if page.cards %}
+                                | <span id="cards-in-grid">{{ page.cards|length }}</span> carte posizionate
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page Options -->
+            <div class="form-section full-width">
+                <h3>⚙️ Opzioni Pagina</h3>
+                
+                <div class="options-grid">
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" 
+                                   id="set_as_home" 
+                                   name="set_as_home"
+                                   {{ 'checked' if book.home_page_id == page.id else '' }}>
+                            <span class="checkbox-custom"></span>
+                            <span class="checkbox-text">
+                                🏠 Imposta come pagina principale
+                                {% if book.home_page_id == page.id %}
+                                    <small>(Attualmente è la pagina home)</small>
+                                {% endif %}
+                            </span>
+                        </label>
+                    </div>
+
+                    {% if page.cards and page.cards|length > 0 %}
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" 
+                                       id="preserve_cards" 
+                                       name="preserve_cards"
+                                       checked>
+                                <span class="checkbox-custom"></span>
+                                <span class="checkbox-text">
+                                    🎴 Mantieni le carte esistenti
+                                    <small>(Disattiva per rimuovere tutte le carte durante il ridimensionamento)</small>
+                                </span>
+                            </label>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            {% if page.cards and page.cards|length > 0 %}
+                <div class="form-section full-width danger-zone">
+                    <h3>⚠️ Zona Pericolosa</h3>
+                    <p class="danger-description">
+                        Queste azioni sono irreversibili e potrebbero causare la perdita di dati.
+                    </p>
+                    
+                    <div class="danger-actions">
+                        <button type="button" 
+                                class="btn btn-danger btn-outline"
+                                onclick="clearAllCards()">
+                            🗑️ Rimuovi Tutte le Carte
+                        </button>
+                        <small class="danger-help">
+                            Rimuove tutte le carte dalla pagina mantenendo la struttura della griglia
+                        </small>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+                <div class="actions-left">
+                    <a href="{{ url_for('pages.view_page', book_id=book.id, page_id=page.id) }}" 
+                       class="btn btn-secondary">
+                        ← Annulla
+                    </a>
+                    <a href="{{ url_for('pages.list_pages', book_id=book.id) }}" 
+                       class="btn btn-outline">
+                        📋 Tutte le Pagine
+                    </a>
+                </div>
+                <div class="actions-right">
+                    <button type="submit" class="btn btn-primary btn-large">
+                        ✅ Salva Modifiche
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Cards Preview -->
+    {% if page.cards and page.cards|length > 0 %}
+        <div class="cards-preview">
+            <h3>🎴 Carte Attuali ({{ page.cards|length }})</h3>
+            <div class="cards-grid">
+                {% for card in page.cards %}
+                    <div class="card-preview" data-x="{{ card.slot_col }}" data-y="{{ card.slot_row }}">
+                        <div class="card-position">{{ card.slot_col }}, {{ card.slot_row }}</div>
+                        {% if card.image_asset %}
+                            <div class="card-image">
+                                <img src="{{ card.image_asset.normalized_url }}" 
+                                     alt="{{ card.label or 'Carta AAC' }}">
+                            </div>
+                        {% else %}
+                            <div class="card-image-placeholder">🎴</div>
+                        {% endif %}
+                        {% if card.label %}
+                            <div class="card-text">{{ card.label }}</div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Get data from data attributes instead of direct Jinja2 injection
+const pageData = document.getElementById('page-data');
+const originalCols = parseInt(pageData.dataset.cols);
+const originalRows = parseInt(pageData.dataset.rows);
+// Carica le carte esistenti dalla route
+const existingCards = [
+    {% if cards %}
+        {% for card in cards %}
+            {
+                id: {{ card.id }},
+                x: {{ card.slot_col }},
+                y: {{ card.slot_row }},
+                label: "{{ card.label|e }}",
+                col_span: {{ card.col_span or 1 }},
+                row_span: {{ card.row_span or 1 }},
+                image_url: "{{ (card.image_asset.normalized_url if card.image_asset else '')|e }}"
+            }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    {% endif %}
+];
+
+// Initialize form
+document.addEventListener('DOMContentLoaded', function() {
+    updateGridPreview();
+    
+    // Update preview when grid size changes
+    document.getElementById('grid_cols').addEventListener('input', function() {
+        updateGridPreview();
+        checkGridChanges();
+    });
+    
+    document.getElementById('grid_rows').addEventListener('input', function() {
+        updateGridPreview();
+        checkGridChanges();
+    });
+});
+
+function updateGridPreview() {
+    const cols = parseInt(document.getElementById('grid_cols').value) || 1;
+    const rows = parseInt(document.getElementById('grid_rows').value) || 1;
+    const total = cols * rows;
+    
+    const preview = document.getElementById('grid-preview');
+    const totalSpan = document.getElementById('grid-total');
+    
+    // Update grid style
+    preview.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    preview.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+    
+    // Generate cells
+    preview.innerHTML = '';
+    let cardsInGrid = 0;
+    
+    for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+            const cell = document.createElement('div');
+            cell.className = 'preview-cell';
+            
+            // Check if there's a card at this position
+            const cardAtPosition = existingCards.find(card => card.x === col && card.y === row);
+            if (cardAtPosition) {
+                cell.classList.add('has-card');
+                cell.innerHTML = `
+                    <div class="cell-card" title="Clicca per modificare: ${cardAtPosition.label}">
+                        ${cardAtPosition.image_url && cardAtPosition.image_url.length > 0 ? 
+                            `<img src="${cardAtPosition.image_url}" alt="${cardAtPosition.label}" style="width:100%;height:100%;object-fit:contain;border-radius:4px;">` : 
+                            '🎴'
+                        }
+                        <div class="edit-overlay">
+                            <span class="edit-icon">✏️</span>
+                        </div>
+                    </div>
+                `;
+                cell.style.cursor = 'pointer';
+                cell.addEventListener('click', () => {
+                    window.location.href = `/books/{{ book.id }}/pages/{{ page.id }}/cards/${cardAtPosition.id}/edit`;
+                });
+                cardsInGrid++;
+            } else {
+                cell.textContent = `${col},${row}`;
+            }
+            
+            preview.appendChild(cell);
+        }
+    }
+    
+    // Update total
+    totalSpan.textContent = total;
+    
+    // Update cards in grid counter
+    const cardsInGridSpan = document.getElementById('cards-in-grid');
+    if (cardsInGridSpan) {
+        cardsInGridSpan.textContent = cardsInGrid;
+        
+        // Highlight cards that would be out of bounds
+        const cardsOutOfBounds = existingCards.length - cardsInGrid;
+        if (cardsOutOfBounds > 0) {
+            cardsInGridSpan.style.color = 'var(--danger-color)';
+            cardsInGridSpan.title = `${cardsOutOfBounds} carte fuori dalla griglia`;
+        } else {
+            cardsInGridSpan.style.color = '';
+            cardsInGridSpan.title = '';
+        }
+    }
+    
+    // Validate grid size
+    if (total > 50) {
+        preview.classList.add('warning');
+        totalSpan.style.color = 'var(--warning-color)';
+    } else {
+        preview.classList.remove('warning');
+        totalSpan.style.color = '';
+    }
+}
+
+function checkGridChanges() {
+    const cols = parseInt(document.getElementById('grid_cols').value) || 1;
+    const rows = parseInt(document.getElementById('grid_rows').value) || 1;
+    const warning = document.getElementById('grid-warning');
+    
+    if (warning && (cols !== originalCols || rows !== originalRows)) {
+        warning.style.display = 'flex';
+        
+        // Check if any cards would be out of bounds
+        const cardsOutOfBounds = existingCards.filter(card => 
+            card.x >= cols || card.y >= rows
+        );
+        
+        if (cardsOutOfBounds.length > 0) {
+            warning.classList.add('danger');
+            warning.querySelector('p').innerHTML = 
+                `Modificare le dimensioni della griglia causerà la perdita di <strong>${cardsOutOfBounds.length} carte</strong> posizionate fuori dalla nuova griglia.`;
+        } else {
+            warning.classList.remove('danger');
+            warning.querySelector('p').innerHTML = 
+                'Le dimensioni della griglia sono cambiate. Tutte le carte esistenti rimarranno nella nuova griglia.';
+        }
+    } else if (warning) {
+        warning.style.display = 'none';
+    }
+}
+
+function clearAllCards() {
+    const confirmation = prompt(
+        'Per confermare la rimozione di tutte le carte, scrivi "ELIMINA CARTE":'
+    );
+    
+    if (confirmation === 'ELIMINA CARTE') {
+        // Add hidden input to signal card removal
+        const form = document.getElementById('page-form');
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = 'clear_all_cards';
+        hiddenInput.value = 'true';
+        form.appendChild(hiddenInput);
+        
+        // Submit form
+        form.submit();
+    } else if (confirmation !== null) {
+        alert('Testo di conferma non corretto. Operazione annullata.');
+    }
+}
+
+// Form validation
+document.getElementById('page-form').addEventListener('submit', function(e) {
+    const title = document.getElementById('title').value.trim();
+    const cols = parseInt(document.getElementById('grid_cols').value);
+    const rows = parseInt(document.getElementById('grid_rows').value);
+    
+    if (!title) {
+        alert('Il titolo della pagina è obbligatorio');
+        e.preventDefault();
+        return;
+    }
+    
+    if (cols < 1 || cols > 10 || rows < 1 || rows > 10) {
+        alert('Le dimensioni della griglia devono essere tra 1 e 10');
+        e.preventDefault();
+        return;
+    }
+    
+    if (cols * rows > 50) {
+        if (!confirm('La griglia è molto grande (' + (cols * rows) + ' celle). Continuare?')) {
+            e.preventDefault();
+            return;
+        }
+    }
+    
+    // Check for cards that would be lost
+    const cardsOutOfBounds = existingCards.filter(card => 
+        card.x >= cols || card.y >= rows
+    );
+    
+    if (cardsOutOfBounds.length > 0 && !document.getElementById('preserve_cards').checked) {
+        const confirmed = confirm(
+            `${cardsOutOfBounds.length} carte verranno rimosse perché fuori dalla nuova griglia. Continuare?`
+        );
+        if (!confirmed) {
+            e.preventDefault();
+            return;
+        }
+    }
+});
+</script>
+
+<style>
+.page-form-container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    margin-top: var(--spacing-xs);
+}
+
+.status-info {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-md);
+    margin-top: var(--spacing-md);
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-xs);
+}
+
+.status-item:last-child {
+    margin-bottom: 0;
+}
+
+.status-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.status-value {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.status-badge {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-badge.home {
+    background: linear-gradient(135deg, #ffd700, #ffed4a);
+    color: #8b5a00;
+}
+
+.warning-box {
+    display: flex;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--warning-bg);
+    border: 1px solid var(--warning-color);
+    border-radius: var(--radius-sm);
+    margin-top: var(--spacing-md);
+}
+
+.warning-box.danger {
+    background: var(--danger-bg);
+    border-color: var(--danger-color);
+}
+
+.warning-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.warning-content h4 {
+    margin: 0 0 var(--spacing-xs) 0;
+    color: var(--warning-color);
+}
+
+.warning-box.danger .warning-content h4 {
+    color: var(--danger-color);
+}
+
+.warning-content p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+}
+
+.preview-cell {
+    position: relative;
+    background: var(--bg-tertiary);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.preview-cell:not(.has-card) {
+    border-style: dashed;
+    opacity: 0.7;
+}
+
+.preview-cell:not(.has-card):hover {
+    opacity: 1;
+    border-color: var(--primary-color);
+    background: var(--bg-card-hover);
+}
+
+.preview-cell.has-card {
+    background: var(--success-color);
+    color: white;
+    font-weight: 600;
+    border-color: var(--success-color);
+    cursor: pointer;
+}
+
+.preview-cell.has-card:hover {
+    background: var(--primary-color);
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.cell-card {
+    font-size: 1.2rem;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.cell-card img {
+    border-radius: 4px;
+}
+
+.edit-overlay {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.preview-cell.has-card:hover .edit-overlay {
+    opacity: 1;
+}
+
+.edit-icon {
+    font-size: 12px;
+    color: white;
+}
+
+.danger-zone {
+    background: var(--danger-bg) !important;
+    border: 2px solid var(--danger-color) !important;
+}
+
+.danger-zone h3 {
+    color: var(--danger-color) !important;
+}
+
+.danger-description {
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-lg);
+    font-size: 0.875rem;
+    font-style: italic;
+}
+
+.danger-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.danger-help {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
+
+.cards-preview {
+    margin-top: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+}
+
+.cards-preview h3 {
+    margin-bottom: var(--spacing-lg);
+    color: var(--primary-color);
+}
+
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.card-preview {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-sm);
+    text-align: center;
+    position: relative;
+}
+
+.card-position {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 0.625rem;
+    color: var(--text-muted);
+    background: rgba(0, 0, 0, 0.1);
+    padding: 1px 4px;
+    border-radius: 2px;
+}
+
+.card-image {
+    width: 100%;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: var(--spacing-xs);
+}
+
+.card-image img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.card-image-placeholder {
+    width: 100%;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-xs);
+}
+
+.card-text {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Note: Styles inherited from main.css and shared stylesheets */
+
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .grid-config {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+        gap: var(--spacing-md);
+        align-items: stretch;
+    }
+    
+    .cards-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+}
+</style>
+{% endblock %}

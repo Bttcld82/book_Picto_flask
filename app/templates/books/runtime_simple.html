@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}Runtime - {{ book.title }}{% endblock %}
+
+{% block content %}
+<style>
+.runtime-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.runtime-header {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.runtime-title {
+    font-size: 24px;
+    margin: 0;
+    color: #333;
+}
+
+.exit-btn {
+    background: #dc3545;
+    color: white;
+    padding: 8px 16px;
+    text-decoration: none;
+    border-radius: 4px;
+}
+
+.aac-grid-runtime {
+    display: grid;
+    gap: 15px;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.aac-card-runtime {
+    background: white;
+    border: 2px solid #28a745;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    cursor: pointer;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.aac-card-runtime:hover {
+    background: #f0f0f0;
+}
+
+.aac-card-image {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.aac-card-placeholder {
+    width: 60px;
+    height: 60px;
+    background: #e9ecef;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.aac-card-label {
+    font-weight: bold;
+    font-size: 14px;
+    color: #333;
+}
+
+.aac-card-action {
+    margin-top: 5px;
+    padding: 4px 8px;
+    background: linear-gradient(45deg, #007bff, #0056b3);
+    color: white;
+    border-radius: 12px;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    max-width: 90%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.aac-card-action:hover {
+    background: linear-gradient(45deg, #0056b3, #003d82);
+    transform: scale(1.05);
+    border-color: rgba(255,255,255,0.3);
+    box-shadow: 0 2px 8px rgba(0,123,255,0.3);
+}
+
+.action-icon {
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.action-text {
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.page-navigation {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.page-nav-btn {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    margin: 0 5px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.page-nav-btn:hover {
+    background: #0056b3;
+}
+</style>
+
+<div class="runtime-container">
+    <!-- Header -->
+    <header class="runtime-header">
+        <h1 class="runtime-title">📖 {{ book.title }}</h1>
+        <a href="{{ url_for('books.list_books') }}" class="exit-btn">🏠 Torna ai libri</a>
+    </header>
+
+    <!-- Griglia AAC -->
+    <main>
+        <div class="aac-grid-runtime" 
+             style="grid-template-columns: repeat({{ (current_page.grid_cols if current_page and current_page.grid_cols else 3) }}, 1fr);
+                    grid-template-rows: repeat({{ (current_page.grid_rows if current_page and current_page.grid_rows else 3) }}, 1fr);">
+            
+            {% if cards %}
+                {% for card in cards %}
+                    <div class="aac-card-runtime" 
+                         style="grid-column: {{ (card.slot_col + 1 if card.slot_col is not none else 1) }} / span {{ (card.col_span if card.col_span else 1) }};
+                                grid-row: {{ (card.slot_row + 1 if card.slot_row is not none else 1) }} / span {{ (card.row_span if card.row_span else 1) }};"
+                         data-has-navigation="{{ 'true' if card.target_page_id else 'false' }}"
+                         data-target-page="{{ card.target_page_id or '' }}"
+                         onclick="handleCardClick(this, event)">
+                        
+                        <!-- Immagine -->
+                        {% if card.image and card.image.url %}
+                            <img src="/static/{{ card.image.url }}" 
+                                 alt="{{ card.label or 'Carta' }}"
+                                 class="aac-card-image"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="aac-card-placeholder" style="display: none;">📷</div>
+                        {% else %}
+                            <div class="aac-card-placeholder">📷</div>
+                        {% endif %}
+                        
+                        <!-- Label -->
+                        {% if card.label %}
+                            <div class="aac-card-label">{{ card.label }}</div>
+                        {% endif %}
+                        
+                        <!-- Azione di navigazione -->
+                        {% if card.target_page_id and card.target_page %}
+                            <div class="aac-card-action" onclick="navigateToPage('{{ card.target_page_id }}'); event.stopPropagation();">
+                                <span class="action-icon">→</span>
+                                <span class="action-text">{{ card.target_page.title }}</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+                    <h3>Nessuna carta in questa pagina</h3>
+                    <p>Vai in modalità gestione per aggiungere carte.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Navigazione pagine -->
+        {% if all_pages and all_pages|length > 1 %}
+        <div class="page-navigation">
+            {% if current_page in all_pages %}
+                {% set current_index = all_pages.index(current_page) %}
+                
+                {% if current_index > 0 %}
+                    <button class="page-nav-btn" onclick="goToPage('{{ all_pages[current_index-1].id }}')">
+                        ⬅️ Precedente
+                    </button>
+                {% endif %}
+                
+                <span style="margin: 0 10px;">
+                    Pagina {{ current_index + 1 }} di {{ all_pages|length }}
+                </span>
+                
+                {% if current_index < all_pages|length - 1 %}
+                    <button class="page-nav-btn" onclick="goToPage('{{ all_pages[current_index+1].id }}')">
+                        Successiva ➡️
+                    </button>
+                {% endif %}
+            {% endif %}
+        </div>
+        {% endif %}
+    </main>
+</div>
+
+<script>
+function goToPage(pageId) {
+    if (pageId) {
+        window.location.href = `/books/{{ book.id }}/runtime/${pageId}`;
+    }
+}
+
+function navigateToPage(pageId) {
+    // Funzione specifica per la navigazione dal badge
+    if (pageId) {
+        // Effetto visivo di transizione
+        const grid = document.querySelector('.aac-grid-runtime');
+        if (grid) {
+            grid.style.opacity = '0.7';
+            grid.style.transform = 'scale(0.98)';
+        }
+        
+        setTimeout(() => {
+            window.location.href = `/books/{{ book.id }}/runtime/${pageId}`;
+        }, 150);
+    }
+}
+
+function handleCardClick(cardElement, event) {
+    // Controlla se il click è sul badge di navigazione
+    if (event.target.closest('.aac-card-action')) {
+        return; // Non fare nulla, lascia che il badge gestisca la navigazione
+    }
+    
+    // Effetto visivo
+    cardElement.style.transform = 'scale(0.95)';
+    setTimeout(() => {
+        cardElement.style.transform = '';
+    }, 150);
+    
+    // Sintesi vocale se presente
+    const label = cardElement.querySelector('.aac-card-label');
+    if (label && 'speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(label.textContent);
+        utterance.lang = 'it-IT';
+        speechSynthesis.speak(utterance);
+    }
+}
+</script>
+{% endblock %}

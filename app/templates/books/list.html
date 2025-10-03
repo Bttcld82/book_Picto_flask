@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}AAC Builder - Home{% endblock %}
+
+{% block content %}
+<!-- Homepage Header -->
+<div class="homepage-hero">
+    <div class="hero-content">
+        <h1 class="hero-title">
+            <span class="hero-icon">🗣️</span>
+            AAC Builder
+        </h1>
+        <p class="hero-subtitle">
+            Costruisci libri di Comunicazione Aumentativa e Alternativa
+        </p>
+        <div class="hero-actions">
+            <a href="{{ url_for('books.create_book') }}" class="btn btn-primary btn-hero">
+                ➕ Nuovo Libro AAC
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Books Section -->
+<div class="homepage-section">
+    <div class="section-header">
+        <h2 class="section-title">
+            <span class="section-icon">📚</span>
+            I tuoi Libri
+        </h2>
+        {% if books %}
+            <span class="section-count">{{ books|length }} libro{{ 's' if books|length != 1 else '' }}</span>
+        {% endif %}
+    </div>
+
+    {% if books %}
+        <div class="books-grid">
+            {% for book in books %}
+                <div class="book-card">
+                    <div class="book-card-header">
+                        <h3 class="book-title">
+                            <a href="{{ url_for('books.view_book', book_id=book.id) }}">
+                                {{ book.title }}
+                            </a>
+                        </h3>
+                        <div class="book-meta">
+                            <span class="book-locale">{{ book.locale or 'it-IT' }}</span>
+                            {% if book.home_page_id %}
+                                <span class="book-home-indicator">🏠</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="book-card-body">
+                        <div class="book-stats">
+                            <div class="stat-item">
+                                <span class="stat-icon">📄</span>
+                                <span class="stat-label">Pagine</span>
+                                <span class="stat-value">{{ book.pages|length if book.pages else 0 }}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-icon">🎴</span>
+                                <span class="stat-label">Carte</span>
+                                <span class="stat-value">{{ book.total_cards if book.total_cards is defined else 0 }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="book-card-actions">
+                        <a href="{{ url_for('books.runtime_book', book_id=book.id) }}" 
+                           class="btn btn-primary btn-card" title="Apri in modalità runtime">
+                            🚀 Apri
+                        </a>
+                        <a href="{{ url_for('books.view_book', book_id=book.id) }}" 
+                           class="btn btn-secondary btn-card" title="Gestisci libro">
+                            📊 Gestisci
+                        </a>
+                        <a href="{{ url_for('books.edit_book', book_id=book.id) }}" 
+                           class="btn btn-secondary btn-card" title="Modifica libro">
+                            ✏️ Modifica
+                        </a>
+                    </div>
+                    
+                    <div class="book-card-footer">
+                        <form method="POST" 
+                              action="{{ url_for('books.delete_book', book_id=book.id) }}" 
+                              class="delete-form"
+                              onsubmit="return confirm('Eliminare il libro \'{{ book.title }}\'? Questa azione non può essere annullata.')">
+                            <button type="submit" class="btn btn-danger btn-sm">🗑️ Elimina</button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">📖</div>
+            <h3 class="empty-title">Nessun libro presente</h3>
+            <p class="empty-description">
+                Inizia il tuo percorso AAC creando il primo libro di comunicazione. 
+                Potrai aggiungere pagine, carte e immagini per costruire uno strumento 
+                di comunicazione personalizzato.
+            </p>
+            <a href="{{ url_for('books.create_book') }}" class="btn btn-primary btn-empty">
+                🚀 Crea il primo libro
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Quick Actions Section -->
+{% if books %}
+<div class="homepage-section">
+    <div class="section-header">
+        <h2 class="section-title">
+            <span class="section-icon">⚡</span>
+            Azioni Rapide
+        </h2>
+    </div>
+    
+    <div class="quick-actions">
+        <a href="{{ url_for('assets.list_assets') }}" class="quick-action-card">
+            <div class="quick-action-icon">🖼️</div>
+            <div class="quick-action-content">
+                <h4>Gestisci Immagini</h4>
+                <p>Carica e organizza le immagini per le tue carte AAC</p>
+            </div>
+        </a>
+        
+        <a href="{{ url_for('books.create_book') }}" class="quick-action-card">
+            <div class="quick-action-icon">📚</div>
+            <div class="quick-action-content">
+                <h4>Nuovo Libro</h4>
+                <p>Crea un nuovo libro di comunicazione AAC</p>
+            </div>
+        </a>
+        
+        <div class="quick-action-card info-card">
+            <div class="quick-action-icon">💡</div>
+            <div class="quick-action-content">
+                <h4>Suggerimento</h4>
+                <p>Usa il tasto 🚀 per aprire un libro in modalità comunicazione</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

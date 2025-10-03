@@ -1,0 +1,669 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page.title }} - {{ book.title }} - AAC Builder{% endblock %}
+
+{% block content %}
+<div class="page-viewer-container">
+    <header class="page-header">
+        <div class="header-content">
+            <div class="breadcrumb">
+                <a href="{{ url_for('books.list_books') }}">Libri</a>
+                <span class="separator">›</span>
+                <a href="{{ url_for('books.view_book', book_id=book.id) }}">{{ book.title }}</a>
+                <span class="separator">›</span>
+                <a href="{{ url_for('pages.list_pages', book_id=book.id) }}">Pagine</a>
+                <span class="separator">›</span>
+                <span>{{ page.title }}</span>
+            </div>
+            <h1>📄 {{ page.title }}</h1>
+            <div class="page-meta">
+                {% if book.home_page_id == page.id %}
+                    <span class="badge badge-home">🏠 Home Page</span>
+                {% endif %}
+                <span class="badge badge-order">Pagina {{ page.order + 1 }}</span>
+                <span class="badge badge-grid">{{ page.grid_cols }}×{{ page.grid_rows }}</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('pages.edit_page', book_id=book.id, page_id=page.id) }}" 
+               class="btn btn-primary">
+                ✏️ Modifica
+            </a>
+            <div class="dropdown">
+                <button class="btn btn-secondary dropdown-toggle" type="button">
+                    ⚙️ Azioni
+                </button>
+                <div class="dropdown-menu">
+                    {% if book.home_page_id != page.id %}
+                        <form method="POST" action="{{ url_for('pages.set_home_page', book_id=book.id, page_id=page.id) }}">
+                            <button type="submit" class="dropdown-item">
+                                🏠 Imposta come Home
+                            </button>
+                        </form>
+                    {% endif %}
+                    <a href="{{ url_for('pages.create_page', book_id=book.id) }}" class="dropdown-item">
+                        ➕ Nuova Pagina
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <form method="POST" 
+                          action="{{ url_for('pages.delete_page', book_id=book.id, page_id=page.id) }}"
+                          onsubmit="return confirm('Eliminare la pagina \'{{ page.title }}\'? Verranno eliminate anche tutte le carte associate.')">
+                        <button type="submit" class="dropdown-item text-danger">
+                            🗑️ Elimina Pagina
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <a href="{{ url_for('pages.list_pages', book_id=book.id) }}" 
+               class="btn btn-secondary">
+                ← Torna alle Pagine
+            </a>
+        </div>
+    </header>
+
+    <!-- Page Grid Container -->
+    <div class="page-grid-container">
+        <div class="grid-toolbar">
+            <div class="grid-info">
+                <span class="grid-size">Griglia {{ page.grid_cols }}×{{ page.grid_rows }}</span>
+                <span class="cards-count">{{ page.cards|length if page.cards else 0 }} carte</span>
+            </div>
+            <div class="grid-actions">
+                <button class="btn btn-sm btn-outline" onclick="toggleGridLines()">
+                    📐 Linee Griglia
+                </button>
+                <a href="{{ url_for('cards.create_card', book_id=book.id, page_id=page.id) }}" class="btn btn-sm btn-primary">
+                    ➕ Aggiungi Carta
+                </a>
+            </div>
+        </div>
+
+        <!-- AAC Page Grid -->
+        <div class="aac-grid" 
+             id="aac-grid"
+             data-cols="{{ page.grid_cols }}" 
+             data-rows="{{ page.grid_rows }}">
+            
+            {% if page.cards %}
+                {% for card in page.cards %}
+                    <div class="aac-cell occupied" 
+                         data-col="{{ card.slot_col }}" 
+                         data-row="{{ card.slot_row }}"
+                         data-card-id="{{ card.id }}"
+                         data-position
+                         style="--grid-col: {{ card.slot_col + 1 }}; --grid-row: {{ card.slot_row + 1 }};">
+                        
+                        <div class="card-content">
+                            <!-- Card Image -->
+                            {% if card.image %}
+                                <div class="card-image">
+                                    <img src="{{ card.image.normalized_url }}" 
+                                         alt="{{ card.label or 'Carta AAC' }}">
+                                </div>
+                            {% else %}
+                                <div class="card-image-placeholder">
+                                    🎴
+                                </div>
+                            {% endif %}
+
+                            <!-- Card Text -->
+                            {% if card.label %}
+                                <div class="card-text">{{ card.label }}</div>
+                            {% endif %}
+
+                            <!-- Card Actions -->
+                            <div class="card-actions">
+                                <button class="card-action-btn" 
+                                        data-card-id="{{ card.id }}"
+                                        onclick="editCard(this.dataset.cardId)"
+                                        title="Modifica carta">
+                                    ✏️
+                                </button>
+                                <button class="card-action-btn" 
+                                        data-card-id="{{ card.id }}"
+                                        onclick="playCard(this.dataset.cardId)"
+                                        title="Riproduci audio">
+                                    🔊
+                                </button>
+                                {% if card.action_type == 'navigation' and card.target_page_id %}
+                                    <button class="card-action-btn navigation" 
+                                            data-page-id="{{ card.target_page_id }}"
+                                            onclick="navigateToPage(this.dataset.pageId)"
+                                            title="Vai alla pagina">
+                                        ➡️
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Empty cells for grid visualization -->
+            {% for row in range(page.grid_rows) %}
+                {% for col in range(page.grid_cols) %}
+                    {% set cell_occupied = page.cards and page.cards|selectattr('x', 'equalto', col)|selectattr('y', 'equalto', row)|list|length > 0 %}
+                    {% if not cell_occupied %}
+                        <div class="aac-cell empty" 
+                             data-x="{{ col }}" 
+                             data-y="{{ row }}"
+                             data-position
+                             style="--grid-col: {{ col + 1 }}; --grid-row: {{ row + 1 }};"
+                             onclick="addCardToCell(this.dataset.x, this.dataset.y)">
+                            <div class="empty-cell-content">
+                                <span class="add-icon">➕</span>
+                                <span class="cell-coords">{{ col }},{{ row }}</span>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Page Navigation -->
+    {% if other_pages %}
+        <div class="page-navigation">
+            <h3>🧭 Altre Pagine</h3>
+            <div class="nav-pages">
+                {% for other_page in other_pages %}
+                    <a href="{{ url_for('pages.view_page', book_id=book.id, page_id=other_page.id) }}" 
+                       class="nav-page-link {% if other_page.id == page.id %}current{% endif %}">
+                        <span class="nav-page-title">{{ other_page.title }}</span>
+                        <span class="nav-page-info">{{ other_page.cards|length if other_page.cards else 0 }} carte</span>
+                        {% if book.home_page_id == other_page.id %}
+                            <span class="nav-page-badge">🏠</span>
+                        {% endif %}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Page Details -->
+    <div class="page-details">
+        <h3>📋 Dettagli Pagina</h3>
+        <div class="details-grid">
+            <div class="detail-item">
+                <span class="detail-label">ID:</span>
+                <span class="detail-value">{{ page.id }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Ordine:</span>
+                <span class="detail-value">{{ page.order + 1 }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Dimensioni:</span>
+                <span class="detail-value">{{ page.grid_cols }} × {{ page.grid_rows }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Carte:</span>
+                <span class="detail-value">{{ page.cards|length if page.cards else 0 }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Tipo:</span>
+                <span class="detail-value">
+                    {% if book.home_page_id == page.id %}
+                        🏠 Home Page
+                    {% else %}
+                        📄 Pagina Standard
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let gridLinesVisible = true;
+
+function toggleGridLines() {
+    const grid = document.getElementById('aac-grid');
+    gridLinesVisible = !gridLinesVisible;
+    grid.classList.toggle('hide-grid-lines', !gridLinesVisible);
+}
+
+function addCardToCell(x, y) {
+    // Funzionalità futura: aprire modal per creare nuova carta
+    const message = `Aggiungere carta alla posizione (${x}, ${y})?`;
+    if (confirm(message)) {
+        alert('Funzionalità in arrivo: creazione carte!');
+    }
+}
+
+function editCard(cardId) {
+    // Funzionalità futura: aprire modal per modificare carta
+    alert(`Modifica carta ${cardId} - Funzionalità in arrivo!`);
+}
+
+function playCard(cardId) {
+    // Funzionalità futura: riprodurre audio della carta
+    console.log(`Playing audio for card ${cardId}`);
+    alert('Riproduzione audio - Funzionalità in arrivo!');
+}
+
+function navigateToPage(pageId) {
+    // Navigazione verso altra pagina
+    const baseUrl = "{{ url_for('pages.view_page', book_id=book.id, page_id=0) }}";
+    window.location.href = baseUrl.replace('/0', '/' + pageId);
+}
+
+// Dropdown functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const dropdownToggle = document.querySelector('.dropdown-toggle');
+    const dropdownMenu = document.querySelector('.dropdown-menu');
+    
+    if (dropdownToggle && dropdownMenu) {
+        dropdownToggle.addEventListener('click', function() {
+            dropdownMenu.classList.toggle('show');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!dropdownToggle.contains(event.target) && !dropdownMenu.contains(event.target)) {
+                dropdownMenu.classList.remove('show');
+            }
+        });
+    }
+});
+</script>
+
+<style>
+.page-viewer-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.page-meta {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+}
+
+.badge {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-home {
+    background: linear-gradient(135deg, #ffd700, #ffed4a);
+    color: #8b5a00;
+}
+
+.badge-order {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+}
+
+.badge-grid {
+    background: var(--primary-color);
+    color: white;
+}
+
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 180px;
+    z-index: 1000;
+}
+
+.dropdown-menu.show {
+    display: block;
+}
+
+.dropdown-item {
+    display: block;
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: none;
+    border: none;
+    text-align: left;
+    text-decoration: none;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.dropdown-item:hover {
+    background: var(--bg-tertiary);
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: var(--spacing-xs) 0;
+}
+
+.text-danger {
+    color: var(--danger-color) !important;
+}
+
+.page-grid-container {
+    margin: var(--spacing-xl) 0;
+}
+
+.grid-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-md);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+}
+
+.grid-info {
+    display: flex;
+    gap: var(--spacing-lg);
+    font-size: 0.875rem;
+}
+
+.grid-size {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.cards-count {
+    color: var(--text-secondary);
+}
+
+.grid-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.aac-grid {
+    display: grid;
+    gap: 2px;
+    background: var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    min-height: 400px;
+    transition: all 0.3s ease;
+}
+
+.aac-grid.hide-grid-lines {
+    gap: 0;
+    background: transparent;
+}
+
+.aac-cell {
+    background: var(--bg-card);
+    border-radius: var(--radius-sm);
+    position: relative;
+    min-height: 80px;
+    transition: all 0.2s ease;
+}
+
+.aac-cell.empty {
+    background: var(--bg-tertiary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.aac-cell.empty:hover {
+    background: var(--bg-card-hover);
+    border: 2px dashed var(--primary-color);
+}
+
+.empty-cell-content {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.add-icon {
+    display: block;
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-xs);
+    opacity: 0.7;
+}
+
+.cell-coords {
+    font-size: 0.625rem;
+    opacity: 0.5;
+}
+
+.aac-cell.occupied {
+    background: white;
+    border: 1px solid var(--border-color);
+}
+
+.aac-cell.occupied:hover {
+    border-color: var(--primary-color);
+    transform: scale(1.02);
+}
+
+.card-content {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.card-image {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.card-image img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.card-image-placeholder {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: var(--text-muted);
+    background: var(--bg-tertiary);
+}
+
+.card-text {
+    background: var(--primary-color);
+    color: white;
+    padding: var(--spacing-xs);
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+.card-actions {
+    position: absolute;
+    top: var(--spacing-xs);
+    right: var(--spacing-xs);
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.aac-cell.occupied:hover .card-actions {
+    opacity: 1;
+}
+
+.card-action-btn {
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.card-action-btn:hover {
+    background: var(--primary-color);
+    transform: scale(1.1);
+}
+
+.card-action-btn.navigation {
+    background: var(--success-color);
+}
+
+.page-navigation {
+    margin: var(--spacing-xl) 0;
+    padding: var(--spacing-lg);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+}
+
+.page-navigation h3 {
+    margin-bottom: var(--spacing-md);
+    color: var(--text-primary);
+}
+
+.nav-pages {
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.nav-page-link {
+    display: flex;
+    flex-direction: column;
+    padding: var(--spacing-sm);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+    position: relative;
+    min-width: 120px;
+}
+
+.nav-page-link:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--primary-color);
+}
+
+.nav-page-link.current {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.nav-page-title {
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.nav-page-info {
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+.nav-page-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #ffd700;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+}
+
+.page-details {
+    margin-top: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+}
+
+.page-details h3 {
+    margin-bottom: var(--spacing-md);
+    color: var(--text-primary);
+}
+
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--spacing-sm);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+}
+
+.detail-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.detail-value {
+    color: var(--text-primary);
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: var(--spacing-md);
+        align-items: stretch;
+    }
+    
+    .header-actions {
+        justify-content: stretch;
+        flex-wrap: wrap;
+    }
+    
+    .grid-toolbar {
+        flex-direction: column;
+        gap: var(--spacing-md);
+        align-items: stretch;
+    }
+    
+    .aac-grid {
+        min-height: 300px;
+    }
+    
+    .aac-cell {
+        min-height: 60px;
+    }
+    
+    .nav-pages {
+        justify-content: center;
+    }
+    
+    .details-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}

@@ -5,7 +5,7 @@ version: '3.8'
 
 services:
   flask-app:
-    build: ./flask_app
+    build: .
     container_name: aac-flask-app
     ports:
       - "5000:5000"
@@ -14,9 +14,9 @@ services:
       - SECRET_KEY=change-this-in-production
     volumes:
       # Persistenza database
-      - ./flask_app:/app
+      - ./data.db:/app/data.db
       # Persistenza media uploads
-      - ./flask_app/app/static/media:/app/app/static/media
+      - ./app/static/media:/app/app/static/media
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/"]
